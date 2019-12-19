@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" type="text/css" href="meido.css" />
+
+<body>
+	<div class="grid-container">
+		<div class="head">Maid RPG Character Generator</div>
+		<div class="menu"><canvas id="character-sheet" width=700 height=796></canvas></div>
+		<div class="main" id="txtDisp"></div>  
+		<div class="btn" id="optnDisp"></div>
+		<div class="foot" id="footer">
+			Maid Importable:<div class="json" id="json"></div>
+		</div>
+	</div>
+
+	<script type="text/javascript">
+		//--- TABLES ---//
+		// Maid Types
+		// [TypeName, PosStat, NegStat]
+		var typesTable = [["Lolita", 4, 0], ["Sexy", 3, 5], ["Pure", 1, 3], ["Cool", 2, 1], ["Boyish", 0, 2], ["Heroine", 5, 4]]
+
+		// Maid Powers
+		var powersTable = [
+			[
+				["Super Evasion", "In exchange for 1d6 Stress, you can completely avoid a single attack."],
+				["Iron Wall", "You can use your Athletics attribute to defend up to two other characters."],
+				["Trespass", "You can take 1d6 Stress to intrude on a battle, love scene, etc. You can also butt in after the action has ended, and this can even work when someone is using World For Two."],
+				["Weapon From Nowhere", "You can pull your weapon out seemingly from nowhere, and get in a surprise attack. If you make a surprise attack, you get to make an attack roll without the target getting to make an opposed roll."],
+				["Giant Weapon", "You can attack with a giant weapon. (+1 to Athletics for attacking)."],
+				["Ultimate Retort", "You can blow off an opponent completely by delivering a good retort (GM decides). You can make it impossible to defend against this by taking 2 Stess. (This must be role-played)."]
+			],
+			[
+				["Maiden's Tears", "By taking 2d6 Stress, you can make a request that can't be refused. (This must be role-played)."],
+				["World for Two", 'By taking 1d6 Stress, you can create a "world" for you and one other person, where for 5 minutes no one else can intrude.'],
+				["Power of Friendship", "You can take 1d6 Stress in order to remove 2d6 Stress from someone else."],
+				["Cooked With Love", "When someone eats food you've prepared, they lose 1d6 Stress."],
+				["Windows of the Soul", "You understand the master's feelings better than anyone, and can offer careful help. (Add 2 to Favor gained)."],
+				["Passionate Gaze", "With just a glance, you can ingratiate yourself with the master, taking 1d6 Stress to gain 1d3 Favor (roll 1d6, divide by 2, round up)."]
+			],
+			[
+				["Lock Picking", "You can enter any room whenever you feel like. This works even when someone is using World for Two."],
+				["Stalking", "When you're following someone, there's no chance for them to detect you. Don't even bother rolling dice."],
+				["Lie Detector", "By taking 1 Stress you can make other players or the master admit if they've lied."],
+				["Ultimate Menu", "Add +1 to your Skill for the purposes of cooking."],
+				["Instant Cleaning", "Add +1 to your Skill for the purposes of cleaning."],
+				["4-D Dress", "You can produce anything in the mansion from within your maid uniform."]
+			],
+			[
+				["Punishment", "When other maids make mistakes, you can gain the right to punish them, without them having a chance to make an opposed roll."],
+				["Instant Restraint", "If you win a roll of Cunning vs Athletics, you can restrain someone from doing something indecent."],
+				["Coercion", "If you win a roll of Cunning vs Athletics, you can completely damage or tear off someone's clothes, even \"accidentally\"."],
+				["Trap", "Even if you aren't there at the time, you can have a trap prepared in advance during a battle."],
+				["Fake Crying", "You can fake a crying fit, allowing you to use Cunning for what normally would be an Affection roll. (This must be role-played.)"],
+				["Mockery", "When someone is taking Stress damage, you can mock them and cause them to gain an additional 2 Stress points. (This must be role-played)."]
+			],
+			[
+				["Karma", "You can use your Luck to dodge an attack, and if you roll a 10 or higher you cause twice as much Stress to the opponent."],
+				["Saw It", "You can declare that you've seen something happen in the mansion; you can decide the timing too."],
+				["Teleport", "You can go just about anywhere in the mansion instantly."],
+				["Escape", "You can completely flee from a battle without taking any Stress."],
+				["Foreboding", "You can tell when something dangerous is coming."],
+				["Chance Meeting", "By taking 2 points of Stress, you can have an NPC that's just showing up for the first time be an acquaintance from some time before."]
+			],
+			[
+				["Immune to Pain", "During a battle, even if you're sent flying, you don't take any Stress. Outside of battle, however, you can still take Stress points like usual."],
+				["Crisis Adrenaline", "You can spend 1d6 points of Favor after you take Stress damage. The Stress damage is still taken, but you can add that number of Stress damage to your next Atheltics roll (make the Athletics roll as normal, then add the Stress to that total). Maid Smash!"],
+				["Persistence", "Whenever you take Stress, automatically reduce the amount by 1 point."],
+				["Tenacity", "Even after being defeated in battle, you can take 2 Stress to get to your feet."],
+				["Hard Work", "Your relentless hard work pays off in the form of a +3 bonus to the end result (not the attribute or die roll) of Skill rolls."],
+				["Absolute Maid", "You are the very epitome of a maid, and you take no penalties when not in full uniform."]
+			]
+		]
+
+		// Maid Colors (they're like gang colors, but for maids)
+		var colorsTable = [
+			["Red", "Purple", "Orange", "Pink", "Brown", "Vermillion"],
+			["Purple", "Blue", "Green", "Sky Blue", "Navy", "Indigo"],
+			["Orange", "Green", "Yellow", "Cream", "Beige", "Gold"],
+			["Pink", "Sky Blue", "Cream", "White", "Gray", "Silver"],
+			["Brown", "Navy", "Beige", "Gray", "Black", "Metallic"],
+			["Vermillion", "Indigo", "Gold", "Silver", "Metallic", ["Clear or", "Rainbow"]] //Transparent or Rainbow -> Clear or Rainbow
+		]
+
+		// Maid Roots
+		var rootsTable = [
+			["Debts", "Debts", "Slave", "Slave", "Mistress", "Mistress"],
+			["Revenge", "Revenge", "Orphan", "Orphan", ["Illegiti-", "mate Child"], ["Illegiti-", "mate Child"]],
+			[["Family", "Business"], ["Family", "Business"], ["Atone-", "ment"], ["Atone-", "ment"], ["Unrequit-", "ed Love"], ["Unrequit-", "ed Love"]], //Hereditary Maid -> Family Business; Self-Punishment -> Atonement
+			["Money", "Money", ["Infil-", "trator"], ["Infil-", "trator"], "Loyalty", "Loyalty"], //Business -> Money
+			[["Childhood", "Friend"], ["Childhood", "Friend"], ["Admirer", "of Maids"], ["Admirer", "of Maids"], ["Returning", "a Favor"], ["Returning", "a Favor"]],
+			[["Distant", "Relative"], ["Distant", "Relative"], ["Bridal", "Training"], ["Bridal", "Training"], ["Who", "Knows?"], ["Who", "Knows?"]]
+		]
+
+		// Stress Explosions
+		var stressTable = [
+			[["Drugs or", "Alcohol"], ["Drugs or", "Alcohol"], "Stealing", "Stealing", "Violence", "Violence"], //Alcohol/Drugs -> Drugs or Alcohol
+			["Gambling", "Gambling", "Racing", "Racing", "Teasing", "Teasing"],
+			["Mischief", "Mischief", ["Running", "Away"], ["Running", "Away"], ["Complain-", "ing"], ["Complain-", "ing"]],
+			["Seclusion", "Seclusion", "Crying", "Crying", "Rampage", "Rampage"],
+			["Shopping", "Shopping", "Sleep", "Sleep", ["Binge", "Eating"], ["Binge", "Eating"]], //Binge -> Binge Eating
+			["Prayer", "Prayer", ["Spoiled", "Child"], ["Spoiled", "Child"], ["Player", "Choice"], ["Player", "Choice"]]
+		]
+
+		// Weapons
+		var weaponTable = [
+			[["Mop or", "Broom"], "Stun Gun", ["Kitchen", "Knife"], ["Frying", "Pan"], ["Vase or","Pot"], ["Hand-to-", "Hand"]], //Mop/Broom -> Mop or Broom; Vase/Bottle/Pot -> Vase or Pot
+			["Revolver", ["Machine", "Gun"], "Rifle", ["Bomb or", "Grenade"], "Bazooka", "Ray Gun"], //Machinegun -> Machine Gun; Bomb/Grenade -> Bomb or Grenade
+			[["Metal Pipe/", "Nail Bat"], "Hammer", "Scythe", ["Kung Fu", "Weapon"], "Chainsaw", ["Wooden", "Sword/Staff"]],
+			[["Axe or", "Hatchet"], "Morningstar", ["Western", "Sword"], "Whip", ["Spear or", "Lance"], ["Exotic", "Weapon"]], //Axe/Hatchet -> Axe or Hatchet; Spear/Lance -> Spear or Lance
+			[["Knife or", "Scalpel"], ["Chain or", "Rope"], "Claws", "Katana", ["Shuriken", "or Kunai"], ["Halberd or", "Pole Arm"]], //Knife/Scalpel -> Knife or Scalpel; Chain/Rope -> Chain or Rope; Shuriken/Kunai -> Shuriken or Kunai; Halberd/Pole Arm -> Halberd or Pole Arm
+			["Summoning", "Magic", ["Psychic", "Powers"], "Book", ["Internal", "Weapons"], ["Religious", "Symbol"]]
+		]
+
+		// Maid Qualities Subtables
+		var unfmTable = ["Tights", "China Dress", "Armor", "Bondage", "Miniskirt", "Cosplay"]; //Kappougi -> Cosplay
+		var symbTable = ["Skull", "Bat", "Cross", "Yin-Yang", "Star", "Card Suit"];
+		var dlnqTable = ["Tobacco", "Tattoo", "Sunglasses", "Resting Bitch Face", "Piercings", "Gruff Speak"]; //Cigarettes -> Tobacco; Bad Expression -> Resting Bitch Face
+		var acntTable = ["Southern", "British", "Pidgin English", "Meow", "Knight", "Foreigner"];
+		var hairTable = ["Long Ringlets", "Hair Buns", "Highlights", "Curly Hair", "One-Eye Bangs", "Sentient Hair"]; //Dumplings -> Hair Buns; Mesh -> Highlights; One-Eye Hair -> Eye-Covering Bangs; Antenna Hair -> Sentient Hair
+		var accsTable = ["Collar", "Large Ribbon", "Spikes", "Chains", "Black Leather Gloves", "Pet"];
+		var rltnTable = ["Sibling", "Childhood Friends", "Mentor", "Friendly Rivals", "Ex-Lover/Love Triangle", "Vengeance"]; //Love Rival -> Love Triangle
+		var kinkTable = ["Nymphomaniac", "Sadist", "Masochist", "Womanizer", "Likes Them Young", "Exhibitionist"];
+		var crmnTable = ["Killer", "Pyromania", "Kleptomania", "Addict", "Otaku", "Stalker"]; //Pyromaniac -> Pyromania; Kleptomaniac -> Kleptomania
+		var injrTable = ["Stitches", "One Eye", "Burns", "Whip Scars", "Bandages", "Blind"]; //Patchwork -> Stitches
+		var trajTable = ["Breakups", "Dead Lover", "Killed Your Lover", "Former Prostitute", "Betrayal", "Stalked"]; //Separations -> Breakups
+		var pastTable = ["Former Delinquent", "Former Assassin", "Amnesiac", "Bad Reputation", "Wanted", "Runaway"]; //Former Killer -> Former Assassin
+		var trmaTable = ["Suicide Attempts", "Killed Your Parents", "Saw Parents Die", "Sibling Hate", "Family Breakup", "Abusive Parents"];
+		var sjobTable = ["Assassin", "Hacker", "Mad Scientist", "Doctor/Pharmacist", "Doujin Artist", "Artisan"]; //Scientist -> Mad Scientist; Pro Creator->Artisan
+		var mmbrTable = ["Evil Secret Society", "Secret Agent", "Cult", "Political Party", "Shadow Clan", "Government Official"]; //Secret Agency -> Secret Agent; Political Organization -> Political Party
+		var mrphTable = ["Fox", "Spider", "Raven", "Bunny", "Tiger/Lion", "Snake"];
+		var mnstTable = ["Mermaid", "Undead", "Werewolf", "Succubus", "Ghost", "Shinigami"]; //Zombie/Mummy -> Undead
+		var magiTable = ["Priestess", "Taoist", "Fortuneteller", "Sorcerer", "Devil Summoner", "Necromancer"]; //Onmyouji -> Taoist; Western Magician -> Sorcerer
+		var absdTable = ["Alien", "Cyborg", "Runaway Ninja", "Magical Girl", "Fairy", "Mutant"];
+		// Maid Qualities (Annoying, half of these have unique subtables...)
+		var qualitiesTable = [
+			[["Glasses", null], ["Freckles", null], ["Sickly", null], ["Quiet", null], ["Easygoing", null], ["Neat Freak", null]],
+			[["Brown Skin", null], ["Albino", null], ["Shy", null], ["Actually A Guy", null], ["Overactive Imagination", null], ["Greedy", null]],
+			[["Elf Ears", null], ["Nekomimi", null], ["Android/Gynoid", null], ["Vampire", null], ["Princess", null], ["Angel/Devil", null]],
+			[["Uniform", unfmTable], ["Symbol", symbTable], ["Delinquent", dlnqTable], ["Accent", acntTable], ["Hairstyle", hairTable], ["Accessory", accsTable]],
+			[["Relationship", [rltnTable, kinkTable]], ["Criminal Tendencies", crmnTable], ["Injury", injrTable], ["Tragic Love", trajTable], ["Dark Past", pastTable], ["Trauma", trmaTable]],
+			[["Secret Job", sjobTable], ["Membership", mmbrTable], ["Shapeshifter", mrphTable], ["Monster", mnstTable], ["Magic", magiTable], ["Absurd", absdTable]]
+		]
+
+		//--- BUTTONS ---//
+		function displayButtons(element){
+			// Clear bar
+			element.innerHTML = "";
+			// Buttons
+			element.innerHTML += "<button onclick=\"rerollMaid()\">Reroll Maid</button><br>";
+			element.innerHTML += "<button onclick=\"rerollTypes()\">Reroll Maid Types</button><br>";
+			element.innerHTML += "<button onclick=\"rerollColor(0)\">Reroll Hair</button>";
+			element.innerHTML += "<button onclick=\"rerollColor(1)\">Reroll Eyes</button>";
+			element.innerHTML += "<button onclick=\"rerollColor(2)\">Reroll Clothes</button>";
+			element.innerHTML += "<button onclick=\"rerollColor('all')\">Reroll All Colors</button><br>";
+			element.innerHTML += "<button onclick=\"rerollMisc('roots')\">Reroll Maid Roots</button>";
+			element.innerHTML += "<button onclick=\"rerollMisc('explosion')\">Reroll Stress Explosion</button>";
+			element.innerHTML += "<button onclick=\"rerollMisc('weapon')\">Reroll Maid Weapon</button><br>";
+			element.innerHTML += "<button onclick=\"rerollMisc('qualOne')\">Reroll First Quality</button>";
+			element.innerHTML += "<button onclick=\"rerollMisc('qualTwo')\">Reroll Second Quality</button>";
+			element.innerHTML += "<button onclick=\"rerollMisc('qualBoth')\">Reroll Both Qualities</button>";
+			element.innerHTML += "<button onclick=\"rerollMisc('')\">Reroll All Background</button><br>";
+			element.innerHTML += "<button onclick=\"rerollStats()\">Reroll Stats</button>";
+			element.innerHTML += "<button onclick=\"rerollPowers(true)\">Reroll Maid Powers</button><br>";
+			// Inputs
+			element.innerHTML += "Import Maid: <input type='text' id='importBox'><button onclick='loadFromJSON()'>Import</button><br>";
+			// Checkboxes
+			element.innerHTML += "<input type='checkbox' id='rerollPowers'>Reroll powers when stats change<br>";
+			element.innerHTML += "<input type='checkbox' id='perversionEnabled'>Replace Relationship quality with Perversion<br>";
+		}
+
+		function refreshDisplay(maid){
+			// Replace sheet
+			var canvas = document.getElementById("character-sheet");
+			var ctx = canvas.getContext("2d");
+			ctx.clearRect(0, 0, canvas.width, canvas.height);
+			displayCharSheet(maid, ctx);
+			// Replace text
+			var sidebar = document.getElementById("txtDisp");
+			sidebar.innerHTML = "<br>" + generateMaidText(maid);
+			// Replace JSON
+			displayJSON(maid);
+			// Draw buttons
+			//var btnBar = document.getElementById("optnDisp")
+			//displayButtons(btnBar);
+		}
+
+		function loadFromJSON(){
+			var maid = JSON.parse(document.getElementById("importBox").value);
+			//document.getElementById("debug").innerHTML = "h";
+			refreshDisplay(maid);
+		}
+
+		function checkRerollPowers(maid){
+			if (document.getElementById("rerollPowers").checked){
+				displayJSON(maid); // If we don't update the JSON before calling rerollPowers, our changes won't take effect
+				rerollPowers();
+				return true;
+			}
+			return false;
+		}
+
+		function rerollMaid(){
+			var newMaid = generateMaid();
+			refreshDisplay(newMaid);
+		}
+
+		function rerollTypes(){
+			var importable = document.getElementById("json").innerHTML;
+			var maid = JSON.parse(importable);
+
+			// Undo type modifier in old stats
+			typesTable.forEach(function(tbl){
+				if (tbl[0] == maid.types[0]){
+					maid.stats[tbl[1]]--;
+					maid.stats[tbl[2]]++;
+				} // Do two separate checks in case the types are the same
+				if (tbl[0] == maid.types[1]){
+					maid.stats[tbl[1]]--;
+					maid.stats[tbl[2]]++;
+				}
+			});
+			// Roll new types
+			//   Generate first type
+			var typeTemp = typesTable[randInt(0,6)];
+			maid.types[0] = typeTemp[0];
+			maid.stats[typeTemp[1]]++;
+			maid.stats[typeTemp[2]]--;
+			//   Generate second type
+			typeTemp = typesTable[randInt(0,6)];
+			maid.types[1] = typeTemp[0];
+			maid.stats[typeTemp[1]]++;
+			maid.stats[typeTemp[2]]--;
+			//	Fix starting Favor and Spirit
+			maid.startValues = [0, maid.stats[5]*10, maid.stats[1]*2];
+			//	Reroll powers if desired
+			var refreshed = checkRerollPowers(maid);
+
+			// Replace sheet, text, and json only if checkRerollPowers() did not do this already!
+			if (!refreshed) {refreshDisplay(maid);}
+		}
+
+		function rerollColor(field){
+			var importable = document.getElementById("json").innerHTML;
+			var maid = JSON.parse(importable);
+
+			if (field == "all"){
+				maid.colors[0] = d66Roll(colorsTable);
+				maid.colors[1] = d66Roll(colorsTable);
+				maid.colors[2] = d66Roll(colorsTable);
+			}
+			else{
+				maid.colors[field] = d66Roll(colorsTable);	
+			}
+
+			refreshDisplay(maid);
+		}
+
+		function rerollMisc(field){
+			var importable = document.getElementById("json").innerHTML;
+			var maid = JSON.parse(importable);
+
+			switch (field) {
+				case "roots":
+					maid.roots = d66Roll(rootsTable);
+					break;
+				case "explosion":
+					maid.explosion = d66Roll(stressTable);
+					break;
+				case "weapon":
+					maid.weapon = d66Roll(weaponTable);
+					break;
+				case "qualOne":
+					maid.qualities[0] = generateSpecialQuality();
+					break;
+				case "qualTwo":
+					maid.qualities[1] = generateSpecialQuality();
+					break;
+				case "qualBoth":
+					maid.qualities = [generateSpecialQuality(), generateSpecialQuality()];
+					break;
+				default:
+					maid.roots = d66Roll(rootsTable);
+					maid.explosion = d66Roll(stressTable);
+					maid.weapon = d66Roll(weaponTable);
+					maid.qualities = [generateSpecialQuality(), generateSpecialQuality()];
+					break;
+			}
+
+			refreshDisplay(maid);
+		}
+
+		function rerollStats(){
+			var importable = document.getElementById("json").innerHTML;
+			var maid = JSON.parse(importable);
+			// Generate new stats
+			maid.stats = [statRoll(), statRoll(), statRoll(), statRoll(), statRoll(), statRoll()];
+			// Redo the type modifier in our new stats!
+			typesTable.forEach(function(tbl){
+				if (tbl[0] == maid.types[0]){
+					maid.stats[tbl[1]]++;
+					maid.stats[tbl[2]]--;
+				} // Do two separate checks in case the types are the same
+				if (tbl[0] == maid.types[1]){
+					maid.stats[tbl[1]]++;
+					maid.stats[tbl[2]]--;
+				}
+			});
+			//	Fix starting Favor and Spirit
+			maid.startValues = [0, maid.stats[5]*10, maid.stats[1]*2];
+			//	Reroll powers if desired
+			var refreshed = checkRerollPowers(maid);
+
+			// Replace sheet, text, and json only if checkRerollPowers() did not do this already!
+			if (!refreshed) {refreshDisplay(maid);}
+		}
+
+		function rerollPowers(display){
+			var importable = document.getElementById("json").innerHTML;
+			var maid = JSON.parse(importable);
+			
+			maid.power = "";
+			if (sumOfArray(maid.stats) < 10) {
+				maid.power = generateMaidPower(maid.stats) + "; ";
+			}
+			maid.power += generateMaidPower(maid.stats);
+			// Replace sheet, text, and json
+			refreshDisplay(maid);
+		}
+
+		function displayJSON(maid){
+			var jsonStr = JSON.stringify(maid);
+			var importable = document.getElementById("json");
+			importable.innerHTML = jsonStr;
+		}
+
+		//--- RANDOM FUNCTIONS ---//
+		function randInt(min,max){
+			//Return a random number between min (inclusive) and max (exclusive)
+			return Math.floor(Math.random() * (+max - +min)) + +min;
+		}
+
+		function d66Roll(array){
+			//Return a value from a table using a 1D66 roll
+			return array[randInt(1,7)-1][randInt(1,7)-1];
+		}
+
+		function statRoll(){
+			return Math.floor((randInt(1,7)+randInt(1,7))/3);
+		}
+
+		//--- UTILS ---//
+		function maxOfArray(array){
+			var max = 0;
+			array.forEach(function(num){
+				if (num > max) {
+					max = num;
+				}
+			});
+			return max;
+		}
+
+		function sumOfArray(array){
+			var sum = 0;
+			array.forEach(function(num){sum = sum + num});
+			return sum;
+		}
+
+		function changeText(ctx, size, color){
+			ctx.font = size.toString() + "px textile";
+			ctx.fillStyle = color;
+		}
+
+		function drawText(ctx, text, x, y){
+			// If text is string, it's a one-liner
+			if (typeof text == "string") {
+				ctx.fillText(text, x, y);
+				return;
+			}
+			// Otherwise, it's an array, and we need to print it line-by-line
+			var yCtr = y;
+			text.forEach(function(str){
+				ctx.fillText(str, x, yCtr);
+				yCtr = yCtr + 20;
+			});
+		}
+
+		//--- CHARACTER GENERATION ---//
+		function generateSpecialQuality(){
+			var quality = d66Roll(qualitiesTable);
+			var result = "";
+			if (quality[1] != null) {
+				if (quality[0] == "Relationship") {
+					// If the checkbox doesn't exist, it's false
+					var checked = false;
+					if (document.getElementById("perversionEnabled")){
+						if (document.getElementById("perversionEnabled").checked){
+							checked = true;
+						}
+					}
+					// If the checkbox is checked, we want a perversion
+					if (checked) {
+						result = "Perversion: " + quality[1][1][randInt(0,6)];
+					}
+					else {
+						result = "Relationship: " + quality[1][0][randInt(0,6)];
+					}
+				}
+				else {
+					result = quality[0] + ": " + quality[1][randInt(0,6)];
+				}
+			}
+			else {
+				result = quality[0];
+			}
+			return result;
+		}
+
+		function generateMaidPower(stats){
+			var max = maxOfArray(stats);
+			var powers = [];
+			for (i = 0; i < 6; i++) {
+				if (stats[i] == max) {
+					powers.push(powersTable[i][randInt(0,6)]);
+				}
+			}
+			
+			var p = powers[randInt(0,powers.length-1)];
+			var result = "" + p[0] + ": " + p[1]; 
+
+			return result;
+		}
+
+		function generateMaid(){
+			// 1. Attributes //
+			// ATH, AFF, SKL, CUN, LUK, WIL
+			var stats = [statRoll(), statRoll(), statRoll(), statRoll(), statRoll(), statRoll()];
+
+			// 2. Maid Types //
+			var maidTypes = [null, null];
+			// Generate first type
+			var typeTemp = typesTable[randInt(0,6)];
+			maidTypes[0] = typeTemp[0];
+			stats[typeTemp[1]]++;
+			stats[typeTemp[2]]--;
+			// Generate second type
+			typeTemp = typesTable[randInt(0,6)];
+			maidTypes[1] = typeTemp[0];
+			stats[typeTemp[1]]++;
+			stats[typeTemp[2]]--;
+
+			// 3. Maid Colors //
+			// Hair, Eyes, Clothes
+			var maidColors = [d66Roll(colorsTable), d66Roll(colorsTable), d66Roll(colorsTable)];
+
+			// 4. Special Qualities //
+			var specialQualities = [generateSpecialQuality(), generateSpecialQuality()];
+
+			// 5. Etcetera //
+			var maidRoots = d66Roll(rootsTable);
+			var stressExplosion = d66Roll(stressTable);
+			var weapon = d66Roll(weaponTable);
+
+			// 6. Maid Power //
+			var maidPower = "";
+			if (sumOfArray(stats) < 10) {
+				maidPower = generateMaidPower(stats) + "; ";
+			}
+			maidPower = maidPower + generateMaidPower(stats);
+
+			// 7. Favor and Spirit //
+			var favor = stats[1]*2;
+			var spirit = stats[5]*10;
+			var startValues = [0, spirit, favor];
+
+			// 8. Name and Age //
+			// TODO
+			var name = "Hank";
+			var age = 22;
+			
+			return {stats: stats, types: maidTypes, colors: maidColors, qualities: specialQualities, roots: maidRoots, explosion: stressExplosion, power: maidPower, name: name, age: age, weapon: weapon, startValues: startValues};
+		}
+
+		function generateMaidText(maid){
+			var maidText = ""
+
+			maidText += "<b>Name:</b> " + maid.name + "<br>";
+			maidText += "<b>Maid Types:</b> " + maid.types.toString() + "&nbsp;&nbsp;&nbsp;&nbsp;<b>Age:</b> " + maid.age + "<br>";
+			maidText += "<b>Hair:</b> " + maid.colors[0] + "&nbsp;&nbsp;&nbsp;&nbsp;<b>Eyes:</b> " + maid.colors[1] + "&nbsp;&nbsp;&nbsp;&nbsp;<b>Clothes:</b> " + maid.colors[2] + "<br>";
+			maidText += "<b>Maid Roots:</b> " + maid.roots + "&nbsp;&nbsp;&nbsp;&nbsp;<b>Stress Explosion:</b> " + maid.explosion + "&nbsp;&nbsp;&nbsp;&nbsp;<b>Maid Weapon:</b> " + maid.weapon + "<br>";
+			maidText += "<b>Special Qualities:</b> " + maid.qualities[0] + "; " + maid.qualities[1] + "<br>";
+			maidText += "<b>Stats:</b> " + maid.stats.toString() + "<br>";
+			maidText += "<b>Stress:</b> " + maid.startValues[0] + "&nbsp;&nbsp;&nbsp;&nbsp;<b>Spirit:</b> " + maid.startValues[1] + "&nbsp;&nbsp;&nbsp;&nbsp;<b>Favor:</b> " + maid.startValues[2] + "<br>";
+			maidText += "<b>Maid Power(s):</b> " + maid.power + "<br>";
+
+			return maidText;
+		}
+
+		function displayCharSheet(maid, ctx){
+			// Generate BG
+			var sheet = new Image();
+			sheet.src = "sheetsmall.png";
+			sheet.onload = function(){
+				// Draw BG
+				ctx.drawImage(sheet, 0, 0, sheet.width, sheet.height);
+				// Name
+				changeText(ctx, 28, "#000000");
+				ctx.textAlign = "center";
+				ctx.fillText(maid.name, 225, 130);
+
+				// Maid Types & Age
+				ctx.font = "16px textile";
+				ctx.fillText(maid.types[0] + "/" + maid.types[1] + " - Age " + maid.age.toString(), 225, 150);
+
+				// Hair, Eyes, & Clothes
+				ctx.font = "12px textile";
+				drawText(ctx, "Hair", 145, 175);
+				drawText(ctx, "Eyes", 225, 175);
+				drawText(ctx, "Clothes", 305, 175);
+
+				changeText(ctx, 14, "#4c2b2a");
+				drawText(ctx, maid.colors[0], 145, 195);	
+				drawText(ctx, maid.colors[1], 225, 195);
+				drawText(ctx, maid.colors[2], 305, 195);
+
+				// Roots, Explosion, & Weapon
+				changeText(ctx, 12, "#000000");		
+				ctx.fillText("Roots", 145, 240);
+				ctx.fillText("Explosion", 225, 240);
+				ctx.fillText("Weapon", 305, 240);
+
+				changeText(ctx, 14, "#4c2b2a");
+				drawText(ctx, maid.roots, 145, 260);
+				drawText(ctx, maid.explosion, 225, 260);
+				drawText(ctx, maid.weapon, 305, 260);
+
+				// Special Qualities
+				changeText(ctx, 12, "#000000");
+				ctx.fillText("Special Qualities", 225, 305);
+
+				changeText(ctx, 14, "#4c2b2a");
+				ctx.fillText(maid.qualities[0], 225, 325);
+				ctx.fillText(maid.qualities[1], 225, 345);
+
+				// Stats
+				changeText(ctx, 16, "#000000");
+				ctx.fillText("Athletics", 155, 395);
+				ctx.fillText("Affection", 250, 395);
+				ctx.fillText("Skill", 345, 395);
+				ctx.fillText("Cunning", 155, 455);
+				ctx.fillText("Luck", 250, 455);
+				ctx.fillText("Will", 345, 455);
+				ctx.fillText("Stress/Spirit", 475, 395);
+				ctx.fillText("Favor", 475, 455);
+
+				changeText(ctx, 28, "#4c2b2a");
+				ctx.fillText(maid.stats[0], 155, 425);
+				ctx.fillText(maid.stats[1], 250, 425);
+				ctx.fillText(maid.stats[2], 345, 425);
+				ctx.fillText(maid.stats[3], 155, 485);
+				ctx.fillText(maid.stats[4], 250, 485);
+				ctx.fillText(maid.stats[5], 345, 485);
+				ctx.fillText(maid.startValues[0].toString() + "/" + maid.startValues[1].toString(), 475, 425);
+				ctx.fillText(maid.startValues[2], 475, 485);
+
+				// Boxes
+				changeText(ctx, 16, "#000000");
+				ctx.fillText("Maid Power(s)", 195, 520);
+				ctx.fillText("Inventory", 415, 520);
+				ctx.fillText("Stand", 160, 640);
+			}
+		}
+
+
+		const canvas = document.getElementById("character-sheet");
+		const ctx = canvas.getContext("2d");
+
+		var maid = generateMaid();
+		displayCharSheet(maid, ctx);
+
+		var sidebar = document.getElementById("txtDisp");
+		sidebar.innerHTML = "<br>" + generateMaidText(maid);
+		var btnBar = document.getElementById("optnDisp")
+		displayButtons(btnBar);
+		displayJSON(maid);
+	</script> 
+</body>

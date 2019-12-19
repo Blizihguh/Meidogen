@@ -1,0 +1,42 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: textile;
+}
+
+@font-face {
+  font-family: textile;
+  src: url(TextileRegular.woff);
+}
+
+.head { grid-area: header; text-align: center; font-size: 28px; height: 30px;}
+.menu { grid-area: menu; width: 700px;}
+.main { grid-area: main; height: 120px;}
+.btn { grid-area: btn; }
+.foot { grid-area: footer; text-align: center; }
+.json { font-size: 1px; }
+
+.grid-container {
+  display: grid;
+  grid-template-areas:
+    'header header header header header header'
+    'menu main main main main main'
+    'menu btn btn btn btn btn'
+    'footer footer footer footer footer footer';
+}
+
+footer {
+  text-align: center;
+}
+footer div {
+  font-size: 1px;
+}
+
+@media (max-width: 600px) {
+  nav, article {
+    width: 100%;
+    height: auto;
+  }
+}
